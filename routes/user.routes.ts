@@ -18,24 +18,43 @@ const getUserProfile = async (req: express.Request, res: express.Response) => {
     
     const userId = authenticatedUser.id;
 
-    // 使用 TypeORM 查找用戶的完整資料
+    // 使用 TypeORM 查找用戶，並只選擇指定的欄位
     const userRepository = AppDataSource.getRepository(User);
-    // 使用 findOneBy 根據 userId 查找，TypeORM 會自動選擇所有欄位
-    const fullUser = await userRepository.findOneBy({ userId: userId });
+    // 將 findOneBy 改為 findOne，並使用 select 選項
+    const selectedUser = await userRepository.findOne({
+      where: { userId: userId },
+      select: [
+        "userId",
+        "email",
+        "name",
+        "nickname",
+        "role",
+        "phone",
+        "birthday",
+        "gender",
+        "preferredRegions",
+        "preferredEventTypes",
+        "country",
+        "address",
+        "avatar",
+        "isEmailVerified",
+        "oauthProviders",
+        "searchHistory"
+      ]
+    });
 
-    if (!fullUser) {
-      // 理論上 userId 來自有效的 token，不應該找不到，但還是加上檢查
+    if (!selectedUser) {
       return res.status(404).json({
         status: 'failed',
         message: '找不到用戶資料'
       });
     }
 
-    // 返回從數據庫獲取的完整用戶資料
+    // 返回只包含選定欄位的用戶資料
     return res.status(200).json({
       status: 'success',
       data: {
-        user: fullUser 
+        user: selectedUser // 現在返回的是只包含選定欄位的對象
       }
     });
 
