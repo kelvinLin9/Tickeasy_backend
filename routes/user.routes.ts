@@ -73,10 +73,21 @@ const updateUserProfile = async (req: express.Request, res: express.Response) =>
     const userId = (req as any).user.id;
     
     // 從請求中獲取要更新的字段
-    const { name, nickname, phone, birthday, gender, address, country } = req.body;
+    const { 
+        name, 
+        nickname, 
+        phone, 
+        birthday, 
+        gender, 
+        address, 
+        country,
+        preferredRegions, 
+        preferredEventTypes 
+    } = req.body;
     
     // 查找用戶
     const userRepository = AppDataSource.getRepository(User);
+    // 確保加載可能存在的關係，如果需要的話 (這裡可能不需要)
     const user = await userRepository.findOne({ where: { userId } });
     
     if (!user) {
@@ -87,32 +98,37 @@ const updateUserProfile = async (req: express.Request, res: express.Response) =>
     }
     
     // 更新用戶資料
-    if (name) user.name = name;
-    if (nickname) user.nickname = nickname;
-    if (phone) user.phone = phone;
-    if (birthday) user.birthday = birthday;
-    if (gender) user.gender = gender;
-    if (address) user.address = address;
-    if (country) user.country = country;
+    // 使用 xxx !== undefined 判斷更嚴謹，允許傳入空字符串或 null (如果業務邏輯允許)
+    if (name !== undefined) user.name = name;
+    if (nickname !== undefined) user.nickname = nickname;
+    if (phone !== undefined) user.phone = phone;
+    if (birthday !== undefined) user.birthday = birthday;
+    if (gender !== undefined) user.gender = gender;
+    if (address !== undefined) user.address = address;
+    if (country !== undefined) user.country = country;
+    // 添加對 preferredRegions 和 preferredEventTypes 的更新
+    if (preferredRegions !== undefined) user.preferredRegions = preferredRegions;
+    if (preferredEventTypes !== undefined) user.preferredEventTypes = preferredEventTypes;
     
     // 保存更新
     await userRepository.save(user);
     
+    // 返回更新後的用戶數據 (可以考慮返回完整的 user 對象，或只選擇部分字段)
+    // 為了與 GET /profile 保持一致，也只選擇指定字段
+    const updatedSelectedUser = await userRepository.findOne({
+        where: { userId: userId },
+        select: [
+          "userId", "email", "name", "nickname", "role", "phone", "birthday",
+          "gender", "preferredRegions", "preferredEventTypes", "country", 
+          "address", "avatar", "isEmailVerified", "oauthProviders", "searchHistory"
+        ]
+    });
+
     return res.status(200).json({
       status: 'success',
       message: '用戶資料更新成功',
       data: {
-        user: {
-          id: user.userId,
-          name: user.name,
-          nickname: user.nickname,
-          email: user.email,
-          phone: user.phone,
-          birthday: user.birthday,
-          gender: user.gender,
-          address: user.address,
-          country: user.country
-        }
+        user: updatedSelectedUser // 返回更新後、只包含選定字段的用戶對象
       }
     });
   } catch (error) {
