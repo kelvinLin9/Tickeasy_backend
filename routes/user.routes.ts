@@ -6,29 +6,41 @@ import { User } from '../models/user';
 // 臨時的 profile 處理函數
 const getUserProfile = async (req: express.Request, res: express.Response) => {
   try {
-    // req.user 是由 isAuthenticated 中間件設置的
-    const user = (req as any).user;
+    // req.user 由 isAuth 中間件設置，包含 id, email, role
+    const authenticatedUser = (req as any).user;
     
-    if (!user) {
+    if (!authenticatedUser || !authenticatedUser.id) {
       return res.status(401).json({
         status: 'failed',
         message: '未授權'
       });
     }
     
-    // 返回用戶資料
+    const userId = authenticatedUser.id;
+
+    // 使用 TypeORM 查找用戶的完整資料
+    const userRepository = AppDataSource.getRepository(User);
+    // 使用 findOneBy 根據 userId 查找，TypeORM 會自動選擇所有欄位
+    const fullUser = await userRepository.findOneBy({ userId: userId });
+
+    if (!fullUser) {
+      // 理論上 userId 來自有效的 token，不應該找不到，但還是加上檢查
+      return res.status(404).json({
+        status: 'failed',
+        message: '找不到用戶資料'
+      });
+    }
+
+    // 返回從數據庫獲取的完整用戶資料
     return res.status(200).json({
       status: 'success',
       data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          // 其他用戶資料可以根據需要添加
-        }
+        user: fullUser 
       }
     });
+
   } catch (error) {
+    console.error("獲取用戶資料時出錯:", error);
     return res.status(500).json({
       status: 'failed',
       message: '獲取用戶資料失敗'
