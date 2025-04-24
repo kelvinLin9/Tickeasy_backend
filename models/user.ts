@@ -12,8 +12,12 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   OneToMany,
-  Index
+  Index,
+  BeforeInsert,
+  BeforeUpdate
 } from 'typeorm';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 export enum UserRole {
   USER = 'user',
@@ -32,11 +36,16 @@ export class User {
   @PrimaryGeneratedColumn('uuid', { name: 'userId' })
   userId: string;
 
+  // 別名以兼容舊代碼
+  get id(): string {
+    return this.userId;
+  }
+
   @Column({ length: 100, unique: true, nullable: false })
   @Index()
   email: string;
 
-  @Column({ length: 50, nullable: true, select: false })
+  @Column({ length: 60, nullable: true, select: false })
   password: string;
 
   @Column({ length: 50 })
@@ -123,4 +132,53 @@ export class User {
 
   // @OneToMany(() => Order, order => order.user)
   // orders: Order[];
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  async hashPassword() {
+    if (this.password) {
+      this.password = await bcrypt.hash(this.password, 12);
+    }
+  }
+  
+  /**
+   * 比較密碼
+   * @param candidatePassword 候選密碼
+   * @returns 密碼是否匹配
+   */
+  async comparePassword(candidatePassword: string): Promise<boolean> {
+    return bcrypt.compare(candidatePassword, this.password);
+  }
+  
+  /**
+   * 創建驗證碼
+   * @returns 驗證碼和令牌
+   */
+  async createVerificationToken(): Promise<{ token: string; code: string }> {
+    // 生成6位數驗證碼
+    const code = Array(6).fill(0).map(() => Math.floor(Math.random() * 10)).join('');
+    
+    // 存儲驗證碼和過期時間
+    this.verificationToken = code;
+    this.verificationTokenExpires = new Date(Date.now() + 10 * 60 * 1000); // 10分鐘
+    this.lastVerificationAttempt = new Date();
+    
+    return { token: '', code };
+  }
+  
+  /**
+   * 創建密碼重置碼
+   * @returns 密碼重置碼和令牌
+   */
+  async createPasswordResetToken(): Promise<{ token: string; code: string }> {
+    // 生成6位數重置碼
+    const code = Array(6).fill(0).map(() => Math.floor(Math.random() * 10)).join('');
+    
+    // 存儲重置碼和過期時間
+    this.passwordResetToken = code;
+    this.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10分鐘
+    this.lastPasswordResetAttempt = new Date();
+    
+    return { token: '', code };
+  }
 } 

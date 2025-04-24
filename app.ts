@@ -16,8 +16,8 @@ import './models';
 // 注釋掉未實現的路由
 // import swaggerUi from 'swagger-ui-express';
 // import specs from './config/swagger';
-// import authRouter from './routes/auth.routes';
-// import userRouter from './routes/user.routes';
+import authRouter from './routes/auth.routes';
+import userRouter from './routes/user.routes';
 // import verifyRouter from './routes/verify.routes';
 // import adminRouter from './routes/admin.routes';
 // import organizationRouter from './routes/organization.routes';
@@ -40,9 +40,25 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // 資料庫連接
+console.log('開始連接數據庫...');
+// console.log('環境變數檢查:', {
+//   NODE_ENV: process.env.NODE_ENV,
+//   DB_HOST: process.env.DB_HOST,
+//   DB_PORT: process.env.DB_PORT,
+//   DB_NAME: process.env.DB_NAME
+// });
+
 connectToDatabase()
   .then(() => console.log("資料庫連接成功"))
-  .catch(err => console.log("資料庫連接失敗:", err));
+  .catch(err => {
+    console.error("資料庫連接失敗:", err);
+    console.error("錯誤詳情:", {
+      message: err.message,
+      code: err.code,
+      syscall: err.syscall,
+      hostname: err.hostname || '未提供'
+    });
+  });
 
 // 中間件設置
 app.use(helmet());
@@ -56,8 +72,8 @@ app.use(cookieParser());
 // app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // 路由設置 - 暫時注釋掉未實現的路由
-// app.use('/api/v1/auth', authRouter);
-// app.use('/api/v1/users', userRouter);
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/users', userRouter);
 // app.use('/api/v1/verify', verifyRouter);
 // app.use('/api/v1/admin', adminRouter);
 // app.use('/api/v1/organizations', organizationRouter);
@@ -68,10 +84,31 @@ app.use(cookieParser());
 
 // 註冊錯誤處理中間件
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('錯誤詳情:', err);
+  
+  // 開發環境顯示詳細錯誤信息，生產環境顯示友好錯誤信息
+  const isDev = process.env.NODE_ENV === 'development';
+  
   const statusCode = err.status || 500;
+  
+  // 處理特定類型的錯誤，提供友好的錯誤消息
+  let message = err.message || '系統發生錯誤';
+  
+  // TypeORM 特定錯誤處理
+  if (err.name === 'EntityPropertyNotFoundError') {
+    message = '操作失敗，請稍後再試';
+  }
+  
+  // 驗證錯誤
+  if (err.name === 'ValidationError') {
+    message = '提交的數據格式不正確';
+  }
+  
   res.status(statusCode).json({
     status: 'failed',
-    message: err.message || '系統發生錯誤',
+    message,
+    // 只在開發環境下添加詳細錯誤信息
+    ...(isDev && { details: err.stack })
   });
 });
 

@@ -9,11 +9,37 @@
  * - 靈活的遷移系統
  */
 
-import { AppDataSource } from './data-source';
+import { DataSource } from 'typeorm';
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import path from 'path';
 
+// 載入環境變數
 dotenv.config();
+
+// 添加日誌輸出以驗證環境變數
+// console.log('數據庫連接參數:', {
+//   DB_HOST: process.env.DB_HOST,
+//   DB_PORT: process.env.DB_PORT,
+//   DB_USER: process.env.DB_USER,
+//   DB_NAME: process.env.DB_NAME,
+//   DB_PASSWORD: process.env.DB_PASSWORD
+// });
+
+// 創建數據源配置
+export const AppDataSource = new DataSource({
+  type: 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT) || 5432,
+  username: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'password',
+  database: process.env.DB_NAME || 'postgres',
+  synchronize: false,
+  logging: process.env.NODE_ENV === 'development' ? ["error"] : false,
+  entities: [path.join(__dirname, '..', 'models', '*.{ts,js}')],
+  migrations: [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
+  subscribers: [],
+});
 
 /**
  * 連接到資料庫，並根據環境執行初始設定
@@ -25,38 +51,12 @@ dotenv.config();
  */
 export const connectToDatabase = async () => {
   try {
-    // 如果是本地開發環境，先檢查並創建資料庫
-    if (!process.env.DATABASE_URL && process.env.NODE_ENV !== 'production') {
-      await ensureDatabaseExists();
-    }
-
-    // 初始化 TypeORM 連接
     await AppDataSource.initialize();
-    console.log('資料庫連接成功');
-
-    // 根據環境變量決定是否執行遷移或同步
-    if (process.env.NODE_ENV === 'development') {
-      if (process.env.RESET_DB === 'true') {
-        console.log('警告: 重設資料庫選項已啟用，但在 TypeORM 中應使用遷移來管理');
-        // 在 TypeORM 中，推薦使用遷移而非 sync({ force: true })
-        if (process.env.SYNC_DB === 'true') {
-          // 僅在開發環境中使用同步，生產環境絕對不要啟用此選項
-          AppDataSource.synchronize(true);
-          console.log('資料庫已同步 (清除所有數據)');
-        }
-      } else if (process.env.RUN_MIGRATIONS === 'true') {
-        // 執行所有待處理的遷移
-        await AppDataSource.runMigrations();
-        console.log('資料庫遷移已執行');
-      }
-    } else if (process.env.NODE_ENV === 'production' && process.env.RUN_MIGRATIONS === 'true') {
-      // 生產環境下，僅在明確指定時執行遷移
-      await AppDataSource.runMigrations();
-      console.log('生產環境: 資料庫遷移已執行');
-    }
+    console.log('數據庫連接成功');
+    return AppDataSource;
   } catch (error) {
-    console.error('資料庫連接失敗:', error);
-    throw new Error('資料庫連接失敗');
+    console.error('數據庫連接失敗:', error);
+    throw error;
   }
 };
 
@@ -68,10 +68,19 @@ async function ensureDatabaseExists() {
   const {
     DB_HOST = 'localhost',
     DB_PORT = '5432',
-    DB_NAME = 'tickeasy',
+    DB_NAME = 'postgres',
     DB_USER = 'postgres',
     DB_PASSWORD,
   } = process.env;
+  
+  // 輸出數據庫配置信息
+  console.log('嘗試連接數據庫:', {
+    host: DB_HOST,
+    port: DB_PORT,
+    database: 'postgres', // 初始連接到postgres庫
+    user: DB_USER,
+    password: DB_PASSWORD ? '已設置' : '未設置'
+  });
   
   // 連接到默認資料庫以建立新資料庫
   const pool = new Pool({
@@ -101,4 +110,6 @@ async function ensureDatabaseExists() {
   }
 }
 
-export default AppDataSource; 
+// 只導出一個 DataSource 實例
+// 移除默認導出
+// export default AppDataSource; 
