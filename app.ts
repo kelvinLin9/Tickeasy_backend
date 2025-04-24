@@ -16,8 +16,8 @@ import './models';
 // 注釋掉未實現的路由
 // import swaggerUi from 'swagger-ui-express';
 // import specs from './config/swagger';
-import authRouter from './routes/auth.routes';
-import userRouter from './routes/user.routes';
+import authRouter from './routes/auth';
+import userRouter from './routes/user';
 // import verifyRouter from './routes/verify.routes';
 // import adminRouter from './routes/admin.routes';
 // import organizationRouter from './routes/organization.routes';
