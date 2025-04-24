@@ -6,8 +6,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安裝所有依賴 (包括 devDependencies 以便編譯)
-# 注意：移除 NODE_ENV=production 環境變數的設置，以免跳過 devDependencies
-RUN npm install --ignore-scripts
+# 移除 --ignore-scripts 允許 bcrypt 等原生插件的 postinstall 腳本運行
+RUN npm install
 
 # 安裝 TypeScript 並全局安裝 (注意：全局安裝不是最佳實踐，但遵循您之前的修改)
 RUN npm install -g typescript
