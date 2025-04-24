@@ -9,6 +9,7 @@ export interface CustomRequest extends Omit<Request, 'user'> {
     userId: string;
     id: string; // 添加 id 屬性與 userId 保持一致
     role: string;
+    email: string;
   };
   token?: string;
 }
@@ -21,17 +22,18 @@ export const isAuth = async (req: Request, res: Response, next: NextFunction) =>
       throw createHttpError(401, '請先登入');
     }
     const decoded = verifyToken(token);
-    if (!('userId' in decoded) || !('role' in decoded)) {
+    if (!('userId' in decoded) || !('role' in decoded) || !('email' in decoded)) {
       throw createHttpError(401, '無效的 Token 格式');
     }
     
-    // 設置 user 屬性，確保與 Express.User 接口兼容
+    // 設置 user 屬性，確保與 Express.User 接口兼容，並包含 email
     req.user = {
       id: decoded.userId,
-      role: decoded.role as "user" | "admin" | "superuser"
+      role: decoded.role as "user" | "admin" | "superuser",
+      email: decoded.email as string
     };
     
-    console.log('req.user:', decoded);
+    console.log('req.user:', req.user);
     next();
   } catch (error) {
     next(createHttpError(401, '認證失敗：無效的 Token'));
