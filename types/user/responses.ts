@@ -9,8 +9,10 @@ import { Gender, UserRole } from '../../models/user';
  */
 export interface OAuthProvider {
   provider: string;
-  id: string;
-  profile?: Record<string, any>;
+  providerId: string;
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt: Date;
 }
 
 /**

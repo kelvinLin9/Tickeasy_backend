@@ -5,9 +5,11 @@ declare global {
   namespace Express {
     // 擴展 User 接口
     interface User {
-      id: string;
+      userId: string;
       role: UserRole;
       email: string;
+      name: string;
+      isEmailVerified: boolean;
       [key: string]: any;
     }
 

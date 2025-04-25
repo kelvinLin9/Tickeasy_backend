@@ -2,6 +2,8 @@
  * 認證相關請求類型定義
  */
 
+import { UserRole, Gender } from '../../models/user';
+
 // 用戶註冊請求
 export interface RegisterRequest {
   email: string;
@@ -43,16 +45,16 @@ export interface ResetPasswordRequest {
 
 // Google 登入請求的用戶格式
 export interface GoogleUserData {
-  id: string;
+  userId: string;
   name: string;
   email: string;
   photo?: string;
-  role?: string;
+  role?: UserRole;
   oauthProviders?: string[];
   phone?: string;
   address?: string;
   birthday?: string;
-  gender?: string;
+  gender?: Gender | string;
   intro?: string;
   facebook?: string;
   instagram?: string;
@@ -61,6 +63,6 @@ export interface GoogleUserData {
 
 // 擴展 Express 請求以包含 Google 用戶
 export interface GoogleRequestUser {
-  id: string;
+  userId: string;
   user: GoogleUserData;
 } 

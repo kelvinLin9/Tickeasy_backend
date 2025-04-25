@@ -6,8 +6,7 @@ import { TokenPayload } from '../types';
 
 // 更精確的使用者介面定義
 interface User {
-  id?: string;
-  userId?: string;
+  userId: string;
   role: string;
 }
 
@@ -36,7 +35,7 @@ export const generateToken = (user: User): string => {
   
   // 生成 payload，包括用戶 ID 和角色
   const payload: TokenPayload = {
-    userId: user.userId || user.id || '', // 支持兩種屬性名稱，但確保有值
+    userId: user.userId,
     role: user.role,
   };
   

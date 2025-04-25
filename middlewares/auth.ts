@@ -1,26 +1,8 @@
 import jwt from 'jsonwebtoken';
-import { User, UserRole } from '../models/user';
+import { User as UserEntity, UserRole } from '../models/user';
 import { Request, Response, NextFunction } from 'express';
-import { CustomRequest } from '../types/middleware';
 import { TokenPayload } from '../types/auth/jwt';
 import { AppDataSource } from '../config/database';
-
-// 這個全局聲明可以刪除，因為我們已經在 types/express.d.ts 中定義了
-// 但為了保持原始文件的結構，這裡先保留註釋，實際開發中可以刪除這部分
-/* 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        role: string;
-        email: string;
-        [key: string]: any;
-      };
-    }
-  }
-}
-*/
 
 /**
  * 驗證用戶是否已登入的中間件
@@ -55,7 +37,7 @@ export const isAuthenticated = async (req: Request, res: Response, next: NextFun
     }
 
     // 查找用戶
-    const userRepository = AppDataSource.getRepository(User);
+    const userRepository = AppDataSource.getRepository(UserEntity);
     const user = await userRepository.findOne({ where: { userId: decoded.userId } });
     if (!user) {
       return res.status(401).json({
@@ -66,9 +48,11 @@ export const isAuthenticated = async (req: Request, res: Response, next: NextFun
 
     // 在請求對象中設置用戶信息
     req.user = {
-      id: user.userId,
+      userId: user.userId,
       role: user.role,
-      email: user.email
+      email: user.email,
+      name: user.name,
+      isEmailVerified: user.isEmailVerified
     };
 
     next();
@@ -108,7 +92,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     }
 
     // 查找用戶
-    const userRepository = AppDataSource.getRepository(User);
+    const userRepository = AppDataSource.getRepository(UserEntity);
     const user = await userRepository.findOne({ where: { userId: decoded.userId } });
     if (!user) {
       return next();
@@ -116,9 +100,11 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 
     // 在請求對象中設置用戶信息
     req.user = {
-      id: user.userId,
+      userId: user.userId,
       role: user.role,
-      email: user.email
+      email: user.email,
+      name: user.name,
+      isEmailVerified: user.isEmailVerified
     };
 
     next();
@@ -173,9 +159,9 @@ export const isOrganizer = (req: Request, res: Response, next: NextFunction) => 
   next();
 };
 
-export const adminAuth = async (req: CustomRequest, res: Response, next: NextFunction) => {
+export const adminAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await isAuthenticated(req as Request, res, () => {
+    await isAuthenticated(req, res, () => {
       if (req.user) {
         const role = String(req.user.role);
         if (role !== 'admin' && role !== 'superuser') {

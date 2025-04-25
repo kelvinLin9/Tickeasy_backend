@@ -9,7 +9,7 @@ dotenv.config();
 // 擴展 GoogleUser 類型以匹配代碼中實際返回的用戶數據結構
 interface GoogleUser {
   user: {
-    id: string;
+    userId: string;
     email: string;
     name: string;
     avatar?: string;
@@ -119,7 +119,7 @@ passport.use(new GoogleStrategy({
       // 準備傳遞給 Controller 的用戶資料結構，需與 Controller 中預期的一致
       const userData: GoogleUser = {
         user: {
-          id: user.userId, // 使用 userId 而非 id
+          userId: user.userId, // 使用 userId 而非 id
           email: user.email,
           name: user.name, // 確保 name 被包含
           avatar: user.avatar,
@@ -144,7 +144,7 @@ passport.use(new GoogleStrategy({
 
 // 可選：序列化和反序列化用戶 (如果使用 session)
 // passport.serializeUser((user: any, done) => {
-//   done(null, user.user.id); // 假設傳遞的 user 結構是 { user: { id: ... } }
+//   done(null, user.user.userId); // 使用 userId 而非 id
 // });
 
 // passport.deserializeUser(async (id: string, done) => {
@@ -152,7 +152,7 @@ passport.use(new GoogleStrategy({
 //     const userRepository = AppDataSource.getRepository(User);
 //     const user = await userRepository.findOne({ where: { userId: id } });
 //     // 準備反序列化後的用戶資料結構，可能需要調整以匹配應用需求
-//     const userData = user ? { user: { id: user.userId, email: user.email, role: user.role /* ...其他欄位 */ } } : null;
+//     const userData = user ? { user: { userId: user.userId, email: user.email, role: user.role /* ...其他欄位 */ } } : null;
 //     done(null, userData);
 //   } catch (err) {
 //     done(err);

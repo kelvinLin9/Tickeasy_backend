@@ -105,12 +105,12 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
     // 生成 JWT
     const jwtToken = generateToken({
-      userId: newUser.id,
+      userId: newUser.userId,
       role: newUser.role
     });
 
     const userData: UserData = {
-      id: newUser.id,
+      userId: newUser.userId,
       email: newUser.email,
       role: newUser.role,
       name: newUser.name,
@@ -166,7 +166,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     // 移除敏感字段
     const userData: UserData = {
-      id: user.userId,
+      userId: user.userId,
       email: user.email,
       role: user.role,
       name: user.name,
@@ -218,7 +218,7 @@ export const googleLogin = handleErrorAsync(async (req: Request, res: Response, 
     });
   }
   
-  if (!googleReq.user.user.id) {
+  if (!googleReq.user.user.userId) {
     return res.status(400).json({
       status: 'failed',
       message: '未找到用戶識別碼'
@@ -227,13 +227,13 @@ export const googleLogin = handleErrorAsync(async (req: Request, res: Response, 
 
   // 生成 token，包含用戶 ID 和角色
   const token = generateToken({
-    userId: googleReq.user.user.id,
+    userId: googleReq.user.user.userId,
     role: googleReq.user.user.role || 'user'  // 確保有默認角色
   });
 
   // 準備返回的用戶資料
   const userData = {
-    id: googleReq.user.user.id,
+    userId: googleReq.user.user.userId,
     name: googleReq.user.user.name,
     email: googleReq.user.user.email,
     photo: googleReq.user.user.photo,
