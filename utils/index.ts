@@ -2,43 +2,55 @@ import createHttpError from 'http-errors';
 import jsonWebToken from 'jsonwebtoken';
 import { SignOptions } from 'jsonwebtoken';
 import { handleErrorAsync } from './handleErrorAsync';
+import { TokenPayload } from '../types';
 
+// 更精確的使用者介面定義
 interface User {
-  id: string;
-  userId: string;
+  id?: string;
+  userId?: string;
   role: string;
 }
 
+// 電子郵件令牌載荷
 interface EmailTokenPayload {
   code: string;
   iat: number;
   exp: number;
 }
 
-interface AuthTokenPayload {
-  userId: string;
-  role: string;
+// 認證令牌載荷，使用從 types 導入的 TokenPayload
+interface AuthTokenPayload extends TokenPayload {
   iat: number;
   exp: number;
 }
 
-export const generateToken = (user: any) => {
+/**
+ * 生成 JWT 令牌
+ * @param user 用戶數據
+ * @returns JWT 令牌
+ */
+export const generateToken = (user: User): string => {
   if (!process.env.JWT_SECRET || !process.env.JWT_EXPIRES_DAY) {
     throw new Error("Required JWT environment variables are not set.");
   }
   
   // 生成 payload，包括用戶 ID 和角色
-  const payload = {
-    userId: user.userId || user.id, // 支持兩種屬性名稱
+  const payload: TokenPayload = {
+    userId: user.userId || user.id || '', // 支持兩種屬性名稱，但確保有值
     role: user.role,
   };
   
   // 簽名 token
-  return jsonWebToken.sign(payload, process.env.JWT_SECRET || '', {
+  return jsonWebToken.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_DAY || '7d'
   } as SignOptions);
 };
 
+/**
+ * 驗證 JWT 令牌
+ * @param token JWT 令牌
+ * @returns 解碼後的載荷
+ */
 export const verifyToken = (token: string): EmailTokenPayload | AuthTokenPayload => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET environment variable is not set.");
@@ -69,7 +81,11 @@ export const verifyToken = (token: string): EmailTokenPayload | AuthTokenPayload
   }
 };
 
-export const generateEmailToken = () => {
+/**
+ * 生成電子郵件驗證令牌
+ * @returns 驗證碼和令牌
+ */
+export const generateEmailToken = (): { code: string; token: string } => {
   const code = generateRandomCode();
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET environment variable is not set.");
@@ -81,7 +97,11 @@ export const generateEmailToken = () => {
   return { code, token };
 };
 
-const generateRandomCode = () => {
+/**
+ * 生成隨機驗證碼
+ * @returns 6位數字驗證碼
+ */
+const generateRandomCode = (): string => {
   let code = '';
   for (let i = 0; i < 6; i++) {
     code += Math.floor(Math.random() * 10).toString();

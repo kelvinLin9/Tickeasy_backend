@@ -17,15 +17,6 @@ import path from 'path';
 // 載入環境變數
 dotenv.config();
 
-// 添加日誌輸出以驗證環境變數
-// console.log('數據庫連接參數:', {
-//   DB_HOST: process.env.DB_HOST,
-//   DB_PORT: process.env.DB_PORT,
-//   DB_USER: process.env.DB_USER,
-//   DB_NAME: process.env.DB_NAME,
-//   DB_PASSWORD: process.env.DB_PASSWORD
-// });
-
 // 創建數據源配置
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -73,14 +64,6 @@ async function ensureDatabaseExists() {
     DB_PASSWORD,
   } = process.env;
   
-  // 輸出數據庫配置信息
-  console.log('嘗試連接數據庫:', {
-    host: DB_HOST,
-    port: DB_PORT,
-    database: 'postgres', // 初始連接到postgres庫
-    user: DB_USER,
-    password: DB_PASSWORD ? '已設置' : '未設置'
-  });
   
   // 連接到默認資料庫以建立新資料庫
   const pool = new Pool({
@@ -109,7 +92,3 @@ async function ensureDatabaseExists() {
     await pool.end();
   }
 }
-
-// 只導出一個 DataSource 實例
-// 移除默認導出
-// export default AppDataSource; 

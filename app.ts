@@ -7,24 +7,16 @@ import dotenv from 'dotenv';
 dotenv.config();
 import helmet from 'helmet';
 import cors from 'cors';
+
+// 資料庫連接
 import { connectToDatabase } from './config/database';
 
 // 確保模型初始化
 import './models';
 
 // 引入路由
-// 注釋掉未實現的路由
-// import swaggerUi from 'swagger-ui-express';
-// import specs from './config/swagger';
 import authRouter from './routes/auth';
 import userRouter from './routes/user';
-// import verifyRouter from './routes/verify.routes';
-// import adminRouter from './routes/admin.routes';
-// import organizationRouter from './routes/organization.routes';
-// import orderRouter from './routes/order.routes';
-// import paymentRouter from './routes/payment.routes';
-// import ticketRouter from './routes/ticket.routes';
-// import ticketTypeRouter from './routes/ticketType.routes';
 
 const app = express();
 
@@ -38,15 +30,6 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('未處理的 Promise 拒絕:', promise, '原因:', reason);
 });
-
-// 資料庫連接
-console.log('開始連接數據庫...');
-// console.log('環境變數檢查:', {
-//   NODE_ENV: process.env.NODE_ENV,
-//   DB_HOST: process.env.DB_HOST,
-//   DB_PORT: process.env.DB_PORT,
-//   DB_NAME: process.env.DB_NAME
-// });
 
 connectToDatabase()
   .then(() => console.log("資料庫連接成功"))
@@ -68,19 +51,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-// Swagger UI - 暫時注釋掉
-// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
-// 路由設置 - 暫時注釋掉未實現的路由
+// 路由設置
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', userRouter);
-// app.use('/api/v1/verify', verifyRouter);
-// app.use('/api/v1/admin', adminRouter);
-// app.use('/api/v1/organizations', organizationRouter);
-// app.use('/api/v1/orders', orderRouter);
-// app.use('/api/v1/payments', paymentRouter);
-// app.use('/api/v1/ticket', ticketRouter);
-// app.use('/api/v1/ticket-types', ticketTypeRouter);
+
 
 // 註冊錯誤處理中間件
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

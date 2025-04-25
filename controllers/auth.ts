@@ -7,35 +7,36 @@ import { verifyToken, generateToken, handleErrorAsync } from '../utils';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 import { IsNull, Not, MoreThan } from 'typeorm';
 import { AppDataSource } from '../config/database';
+import { 
+  ApiResponse, 
+  TokenPayload,
+  ErrorResponse,
+  RegisterRequest,
+  LoginRequest,
+  VerifyEmailRequest,
+  ResendVerificationRequest,
+  RequestPasswordResetRequest,
+  ResetPasswordRequest,
+  GoogleRequestUser,
+  AuthResponseData,
+  VerificationResponseData,
+  UserData,
+  GoogleUserResponseData
+} from '../types';
 
-
-// Google 登入相關介面
+// Google 登入相關介面 - 保留原有介面以維持相容性
 interface GoogleRequest extends Omit<Request, 'user'> {
-  user?: {
-    id: string; // 添加 id 屬性以與 Express.User 兼容
-    user: {
-      id: string;
-      name: string;
-      email: string;
-      photo?: string;
-      role: string;
-      oauthProviders: string[];
-      phone: string;
-      address: string;
-      birthday: string;
-      gender: string;
-      intro: string;
-      facebook: string;
-      instagram: string;
-      discord: string;
-    }
-  }
+  user?: GoogleRequestUser;
+  query: {
+    state?: string;
+    [key: string]: string | undefined;
+  };
 }
 
 // 註冊新用戶
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, name, nickname, phone, birthday } = req.body;
+    const { email, password, name, nickname, phone, birthday } = req.body as RegisterRequest;
 
     // 檢查必要參數
     if (!email) {
@@ -84,9 +85,9 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     newUser.email = email;
     newUser.password = password;
     newUser.name = name;
-    newUser.nickname = nickname;
-    newUser.phone = phone;
-    newUser.birthday = birthday;
+    newUser.nickname = nickname || '';
+    newUser.phone = phone || '';
+    newUser.birthday = birthday ? new Date(birthday) : null as unknown as Date;
     newUser.role = UserRole.USER;
     newUser.isEmailVerified = false;
     newUser.oauthProviders = [];
@@ -108,21 +109,23 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       role: newUser.role
     });
 
+    const userData: UserData = {
+      id: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+      name: newUser.name,
+      nickname: newUser.nickname,
+      phone: newUser.phone,
+      birthday: newUser.birthday,
+      isEmailVerified: newUser.isEmailVerified
+    };
+
     res.status(201).json({
       status: 'success',
       message: '註冊成功，請檢查郵箱完成驗證',
       data: {
         token: jwtToken,
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          role: newUser.role,
-          name: newUser.name,
-          nickname: newUser.nickname,
-          phone: newUser.phone,
-          birthday: newUser.birthday,
-          isEmailVerified: newUser.isEmailVerified
-        }
+        user: userData
       }
     });
   } catch (err) {
@@ -133,7 +136,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 // 用戶登入
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body as LoginRequest;
 
     // 檢查必要參數
     if (!email) {
@@ -162,7 +165,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     });
 
     // 移除敏感字段
-    const userData = {
+    const userData: UserData = {
       id: user.userId,
       email: user.email,
       role: user.role,
@@ -266,7 +269,7 @@ export const googleLogin = handleErrorAsync(async (req: Request, res: Response, 
 // 驗證電子郵件
 export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, code } = req.body;
+    const { email, code } = req.body as VerifyEmailRequest;
 
     // 檢查必要參數
     if (!email) {
@@ -302,9 +305,14 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
     user.verificationTokenExpires = new Date(0);
     await userRepository.save(user);
 
+    const responseData: VerificationResponseData = {
+      isEmailVerified: true
+    };
+
     res.status(200).json({
       status: 'success',
-      message: 'Email 驗證成功'
+      message: 'Email 驗證成功',
+      data: responseData
     });
   } catch (err) {
     next(err);
@@ -314,7 +322,7 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
 // 重新發送驗證碼
 export const resendVerification = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email } = req.body;
+    const { email } = req.body as ResendVerificationRequest;
 
     // 檢查必要參數
     if (!email) {
@@ -368,7 +376,7 @@ export const resendVerification = async (req: Request, res: Response, next: Next
 // 請求密碼重置
 export const requestPasswordReset = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email } = req.body;
+    const { email } = req.body as RequestPasswordResetRequest;
 
     // 檢查必要參數
     if (!email) {
@@ -413,7 +421,7 @@ export const requestPasswordReset = async (req: Request, res: Response, next: Ne
 // 重置密碼
 export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, code, newPassword } = req.body;
+    const { email, code, newPassword } = req.body as ResetPasswordRequest;
 
     // 檢查必要參數
     if (!email) {

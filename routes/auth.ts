@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Router } from 'express';
 import {
   register,
   login,
@@ -9,7 +9,8 @@ import {
   googleLogin // 雖然暫不測試，但導入保持完整
 } from '../controllers/auth';
 
-const router = express.Router();
+// 創建路由器
+const router: Router = express.Router();
 
 // POST /api/v1/auth/register
 router.post('/register', register);
