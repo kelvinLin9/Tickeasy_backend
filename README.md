@@ -1,104 +1,170 @@
-# Tickeasy 音樂會票務系統
+# Tickeasy 後端專案
 
-使用 PostgreSQL 和 Express 構建的現代化音樂會票務預訂系統。
+這是一個使用 Express.js 和 TypeScript 構建的票務系統後端應用程式，提供一套完整的 API 服務，用於管理音樂會或活動的門票銷售與管理。
 
-## 功能
+## 功能特點
 
-- 用戶註冊和身份驗證 (JWT、Google OAuth)
-- 音樂會瀏覽和進階搜索
-- 票務預訂和金流整合
-- 個人票券管理
-- 管理員後台完整管理功能
+- 用戶身份認證（本地和 Google OAuth 登入）
+- 電子郵件驗證
+- 帳號管理功能
+- RESTful API 設計
+- PostgreSQL 資料庫存儲
+- TypeORM 物件關聯映射
+- 安全性設計（Helmet 防護）
+- API 參數驗證
 
 ## 技術棧
 
-- **後端**：Node.js, Express, TypeScript
-- **資料庫**：PostgreSQL, TypeORM
-- **認證**：JWT, Google OAuth 2.0
-- **容器化**：Docker, Docker Compose
+- **Node.js** + **Express**: 網頁應用框架
+- **TypeScript**: 強型別的 JavaScript 超集
+- **PostgreSQL**: 關聯式資料庫
+- **TypeORM**: 物件關聯映射庫
+- **JWT**: 使用者驗證
+- **Passport.js**: 第三方身份驗證
+- **Jest**: 單元測試框架
 
-## 安裝與運行
+## 安裝與設定
 
-### 前置需求
+### 先決條件
 
-- Node.js v14+
-- PostgreSQL v12+
-- Docker & Docker Compose (可選)
+- Node.js (v14+)
+- PostgreSQL
+- npm 或 yarn
 
-### 本地開發
+### 安裝步驟
 
-1. 克隆倉庫
+1. 複製專案
 
-```bash
-git clone https://github.com/yourusername/tickeasy-backend.git
-cd tickeasy-backend
-```
+   ```bash
+   git clone <repository-url>
+   cd tickeasy-backend
+   ```
 
-2. 安裝依賴
+2. 安裝相依套件
 
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-3. 環境配置
+3. 環境變數設定
+   建立 `.env` 檔案，並設定以下變數：
 
-```bash
-cp .env.example .env
-# 編輯 .env 文件設置您的環境變數
-```
+   ```
+   PORT=3000
+   NODE_ENV=development
 
-4. 啟動資料庫 (使用 Docker)
+   # 資料庫
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_USERNAME=your_username
+   DB_PASSWORD=your_password
+   DB_DATABASE=tickeasy
 
-```bash
-docker-compose up -d
-```
+   # JWT 設定
+   JWT_SECRET=your_jwt_secret
+   JWT_EXPIRES_IN=7d
 
-5. 運行遷移
+   # Email 設定
+   EMAIL_HOST=smtp.example.com
+   EMAIL_PORT=587
+   EMAIL_USER=your_email
+   EMAIL_PASS=your_email_password
 
-```bash
-npm run migrate
-```
+   # Google OAuth (選用)
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google/callback
+   ```
 
-6. 啟動開發服務器
+4. 執行資料庫遷移
+
+   ```bash
+   npm run migrate
+   ```
+
+5. 編譯 TypeScript
+   ```bash
+   npm run build
+   ```
+
+## 啟動應用程式
+
+### 開發模式
 
 ```bash
 npm run dev
 ```
 
-### 使用 Docker 部署
+### 生產模式
 
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+npm start
 ```
 
 ## API 文檔
 
-API 文檔使用 Swagger 生成，開發環境下可訪問：
+### 基礎 URL
+
+`https://tickeasy-backend.onrender.com` 或本地 `http://localhost:3000`
+
+### 認證相關 API (前綴路徑：/api/v1/auth)
+
+| 方法 | 路徑                    | 功能                 | 需要認證 |
+| ---- | ----------------------- | -------------------- | -------- |
+| POST | /register               | 用戶註冊             | 否       |
+| POST | /login                  | 用戶登入             | 否       |
+| POST | /verify-email           | 驗證電子郵件         | 否       |
+| POST | /resend-verification    | 重新發送驗證郵件     | 否       |
+| POST | /request-password-reset | 請求重設密碼         | 否       |
+| POST | /reset-password         | 重設密碼             | 否       |
+| GET  | /google                 | Google 登入（OAuth） | 否       |
+
+### 用戶相關 API (前綴路徑：/api/v1/users)
+
+| 方法 | 路徑     | 功能             | 需要認證 |
+| ---- | -------- | ---------------- | -------- |
+| GET  | /profile | 獲取用戶個人資料 | 是       |
+| PUT  | /profile | 更新用戶個人資料 | 是       |
+
+## 使用 Docker 部署
+
+```bash
+# 建立 Docker 映像
+docker build -t tickeasy-backend .
+
+# 運行容器
+docker run -p 3000:3000 --env-file .env tickeasy-backend
+```
+
+## 測試
+
+```bash
+npm test
+```
+
+## 專案結構
 
 ```
-http://localhost:3000/api-docs
+tickeasy-backend/
+├── bin/                  # 應用程式入口點
+├── config/               # 設定檔案
+├── controllers/          # 業務邏輯控制器
+├── middlewares/          # 中間件
+├── models/               # 資料模型 (TypeORM 實體)
+├── routes/               # API 路由
+├── types/                # TypeScript 類型定義
+├── utils/                # 工具函數
+├── views/                # 視圖 (可選，用於管理介面)
+├── public/               # 靜態檔案
+├── app.ts                # Express 應用程式設定
+├── package.json          # 相依性管理
+└── tsconfig.json         # TypeScript 設定
 ```
-
-## 數據庫模型
-
-主要實體關係：
-
-- 用戶 (Users)
-- 音樂會 (Concerts)
-- 場地 (Venues)
-- 座位區域 (SeatSections)
-- 票券 (Tickets)
-- 訂單 (Orders)
-- 支付記錄 (Payments)
-
-## 貢獻指南
-
-1. Fork 本倉庫
-2. 創建新分支 (`git checkout -b feature/your-feature`)
-3. 提交更改 (`git commit -m 'Add some feature'`)
-4. 推送到分支 (`git push origin feature/your-feature`)
-5. 創建 Pull Request
 
 ## 授權
 
-[MIT](LICENSE)
+本專案使用 ISC 授權協議。
+
+---
+
+如有任何問題或建議，請聯繫專案維護者。
