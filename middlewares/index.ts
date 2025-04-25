@@ -2,7 +2,7 @@ import createHttpError from 'http-errors';
 import validator from 'validator';
 import { verifyToken } from '../utils';
 import { Request, Response, NextFunction } from 'express';
-import { CustomRequest } from '../types/middleware';
+import { UserRole } from '../models/user';
 
 // token 驗證
 export const isAuth = async (req: Request, res: Response, next: NextFunction) => {
@@ -16,11 +16,13 @@ export const isAuth = async (req: Request, res: Response, next: NextFunction) =>
       throw createHttpError(401, '無效的 Token 格式');
     }
     
-    // 設置 user 屬性，確保與 Express.User 接口兼容，並包含 email
+    // 設置 user 屬性，確保與 Express.User 接口兼容
     req.user = {
-      id: decoded.userId,
-      role: decoded.role as "user" | "admin" | "superuser",
-      email: decoded.email as string
+      userId: decoded.userId,
+      role: decoded.role as UserRole,
+      email: decoded.email as string,
+      name: "", // 需要時從資料庫獲取
+      isEmailVerified: false // 需要時從資料庫獲取
     };
     
     console.log('req.user:', req.user);
@@ -31,9 +33,9 @@ export const isAuth = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 // 實作管理員權限（這部分需要後續完善）
-export const isAdmin = async (req: CustomRequest, res: Response, next: NextFunction) => {
+export const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
   // 使用類型斷言處理類型不兼容問題
-  isAuth(req as Request, res, async (err) => {
+  isAuth(req, res, async (err) => {
     if (err) {
       return next(err); // 如果認證中間件遇到錯誤，直接將錯誤傳遞下去
     }
@@ -43,7 +45,8 @@ export const isAdmin = async (req: CustomRequest, res: Response, next: NextFunct
       if (!req.user) {
         throw createHttpError(401, '請先登入');
       }
-      if (req.user.role !== 'admin') {
+      const user = req.user as { userId: string; role: string; email: string; };
+      if (user.role !== 'admin') {
         throw createHttpError(403, '授權失敗：您不具備管理員權限');
       }
       next();

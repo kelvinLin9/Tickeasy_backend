@@ -1,32 +1,34 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppDataSource } from '../config/database';
-import { User } from '../models/user';
+import { User as UserEntity } from '../models/user';
 import { ApiResponse, UpdateProfileRequest, UserProfileResponse, UserProfileData } from '../types';
 import { handleErrorAsync } from '../utils';
-
-// 顯式擴展 Request 類型以確保在此文件中識別 req.user
-interface AuthenticatedRequest extends Request {
-  user?: Express.User;
-}
 
 /**
  * 獲取用戶個人資料
  */
-export const getUserProfile = handleErrorAsync(async (req: AuthenticatedRequest, res: Response<ApiResponse<UserProfileResponse>>, next: NextFunction) => {
-  // req.user 由 isAuth 中間件設置，包含 id, email, role
-  const authenticatedUser = req.user;
-  
-  if (!authenticatedUser || !authenticatedUser.id) {
+export const getUserProfile = handleErrorAsync(async (req: Request, res: Response<ApiResponse<UserProfileResponse>>, next: NextFunction) => {
+  // req.user 由 isAuth 中間件設置，包含 userId, email, role
+  // const authenticatedUser = req.user as Express.User;
+  const authenticatedUser = req.user as { userId: string; role: string; email: string; };
+
+  // if (!authenticatedUser || !authenticatedUser.userId) {
+  //   return res.status(401).json({
+  //     status: 'failed',
+  //     message: '未授權的訪問'
+  //   });
+  // }
+  if (!authenticatedUser) {
     return res.status(401).json({
       status: 'failed',
-      message: '未授權'
+      message: '未授權的訪問'
     });
   }
-  
-  const userId = authenticatedUser.id;
+
+  const userId = authenticatedUser.userId;
 
   // 使用 TypeORM 查找用戶，並只選擇指定的欄位
-  const userRepository = AppDataSource.getRepository(User);
+  const userRepository = AppDataSource.getRepository(UserEntity);
   const selectedUser = await userRepository.findOne({
     where: { userId: userId },
     select: [
@@ -69,15 +71,19 @@ export const getUserProfile = handleErrorAsync(async (req: AuthenticatedRequest,
 /**
  * 更新用戶個人資料
  */
-export const updateUserProfile = handleErrorAsync(async (req: AuthenticatedRequest, res: Response<ApiResponse<UserProfileResponse>>, next: NextFunction) => {
-  const userId = req.user?.id;
-  
-  if (!userId) {
+export const updateUserProfile = handleErrorAsync(async (req: Request, res: Response<ApiResponse<UserProfileResponse>>, next: NextFunction) => {
+  // const userId = (req.user as Express.User)?.userId;
+  const authenticatedUser = req.user as { userId: string; role: string; email: string; };
+
+  // if (!userId) {
+  if (!authenticatedUser) {
     return res.status(401).json({
       status: 'failed',
       message: '未授權'
     });
   }
+
+  const userId = authenticatedUser.userId;
   
   // 從請求中獲取要更新的字段
   const { 
@@ -93,7 +99,7 @@ export const updateUserProfile = handleErrorAsync(async (req: AuthenticatedReque
   } = req.body as UpdateProfileRequest;
   
   // 查找用戶
-  const userRepository = AppDataSource.getRepository(User);
+  const userRepository = AppDataSource.getRepository(UserEntity);
   const user = await userRepository.findOne({ where: { userId } });
   
   if (!user) {
