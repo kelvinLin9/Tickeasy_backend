@@ -46,74 +46,63 @@ passport.use(new GoogleStrategy({
       const googleId = profile.id;
       const avatarUrl = profile.photos?.[0]?.value; // 使用可選鏈接取頭像
 
-      // 優先使用 Google ID 查找用戶
-      let user = await userRepository.findOne({
-        where: { oauthProviders: { provider: 'google', providerId: googleId } as any }, // TypeORM 可能需要更複雜的 JSON 查詢
-        relations: ['oauthProviders'] // 確保加載關聯數據
-      });
+      // 由於 oauthProviders 是 jsonb，我們不能直接在 where 條件中查詢內部屬性。
+      // 先根據 email 查找用戶
+      let user = await userRepository.findOne({ where: { email } });
 
-      // 如果找不到，嘗試用 email 查找
-      if (!user) {
-        user = await userRepository.findOne({ where: { email }, relations: ['oauthProviders'] });
+      if (user) {
+        // 找到用戶，檢查 oauthProviders 陣列中是否已有 Google 記錄
+        const existingProvider = user.oauthProviders?.find(p => p.provider === 'google');
 
-        if (user) {
-          // 找到 email 相同的用戶，檢查是否已關聯 Google
-          const existingProvider = user.oauthProviders.find(p => p.provider === 'google');
-          if (!existingProvider) {
-            // 添加 Google OAuth 關聯
-            user.oauthProviders.push({
-              provider: 'google',
-              providerId: googleId,
-              accessToken,
-              refreshToken,
-              tokenExpiresAt: new Date(Date.now() + 3600000)
-            });
-            if (avatarUrl && !user.avatar) { // 只有在用戶沒有頭像時才更新
-              user.avatar = avatarUrl;
-            }
-            user.isEmailVerified = true; // Google 登入視為已驗證
-            await userRepository.save(user);
-          } else {
-             // 如果 providerId 不匹配，可能是一個問題，這裡先假設 providerId 總是一致
-             // 更新 token (如果需要)
-            existingProvider.accessToken = accessToken;
-            existingProvider.refreshToken = refreshToken;
-            existingProvider.tokenExpiresAt = new Date(Date.now() + 3600000);
-            await userRepository.save(user); // 保存更新
+        if (existingProvider) {
+          // 已有關聯，檢查 providerId 是否一致（理論上應該一致）
+          if (existingProvider.providerId !== googleId) {
+            // 這是一個異常情況，可能需要記錄或處理
+            console.warn(`Mismatched Google ID for email ${email}. DB: ${existingProvider.providerId}, Google: ${googleId}`);
+            // 可以選擇更新 providerId，或拋出錯誤，取決於業務邏輯
+            existingProvider.providerId = googleId; // 暫定更新
           }
+          // 更新 token 和過期時間
+          existingProvider.accessToken = accessToken;
+          existingProvider.refreshToken = refreshToken;
+          existingProvider.tokenExpiresAt = new Date(Date.now() + 3600000);
+          if (avatarUrl && user.avatar !== avatarUrl) { // 更新頭像如果不同
+            user.avatar = avatarUrl;
+          }
+          await userRepository.save(user);
         } else {
-          // Email 和 Google ID 都找不到，創建新用戶
-          const newUser = userRepository.create({
-            email: email,
-            avatar: avatarUrl,
-            name: profile.displayName || email.split('@')[0], // 使用 displayName 或 email 作為默認 name
-            role: UserRole.USER, // 使用 UserRole enum
-            isEmailVerified: true,
-            oauthProviders: [{
-              provider: 'google',
-              providerId: googleId,
-              accessToken,
-              refreshToken,
-              tokenExpiresAt: new Date(Date.now() + 3600000)
-            }]
+          // Email 存在但未關聯 Google，添加 Google OAuth 提供者信息
+          user.oauthProviders = user.oauthProviders || []; // 確保陣列存在
+          user.oauthProviders.push({
+            provider: 'google',
+            providerId: googleId,
+            accessToken,
+            refreshToken,
+            tokenExpiresAt: new Date(Date.now() + 3600000)
           });
-          user = await userRepository.save(newUser);
+          if (avatarUrl && !user.avatar) { // 只有在用戶沒有頭像時才更新
+            user.avatar = avatarUrl;
+          }
+          user.isEmailVerified = true; // Google 登入視為已驗證
+          await userRepository.save(user);
         }
       } else {
-         // 透過 Google ID 找到用戶，更新 token
-         const googleProvider = user.oauthProviders.find(p => p.provider === 'google');
-         if (googleProvider) {
-            googleProvider.accessToken = accessToken;
-            googleProvider.refreshToken = refreshToken;
-            googleProvider.tokenExpiresAt = new Date(Date.now() + 3600000);
-            if (avatarUrl && user.avatar !== avatarUrl) { // 更新頭像如果不同
-                 user.avatar = avatarUrl;
-            }
-            await userRepository.save(user);
-         } else {
-             // 理論上不應該發生，但以防萬一
-             return done(new Error('Inconsistent state: User found by Google ID but no Google provider associated.'));
-         }
+        // Email 不存在，創建新用戶並關聯 Google
+        const newUser = userRepository.create({
+          email: email,
+          avatar: avatarUrl,
+          name: profile.displayName || email.split('@')[0],
+          role: UserRole.USER,
+          isEmailVerified: true,
+          oauthProviders: [{
+            provider: 'google',
+            providerId: googleId,
+            accessToken,
+            refreshToken,
+            tokenExpiresAt: new Date(Date.now() + 3600000)
+          }]
+        });
+        user = await userRepository.save(newUser);
       }
 
       // 準備傳遞給 Controller 的用戶資料結構，需與 Controller 中預期的一致
