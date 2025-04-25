@@ -1,10 +1,13 @@
 import jwt from 'jsonwebtoken';
-import { User } from '../models/user';
+import { User, UserRole } from '../models/user';
 import { Request, Response, NextFunction } from 'express';
-import { CustomRequest } from './index';
+import { CustomRequest } from '../types/middleware';
+import { TokenPayload } from '../types/auth/jwt';
 import { AppDataSource } from '../config/database';
 
-// 擴展 Express.Request 類型
+// 這個全局聲明可以刪除，因為我們已經在 types/express.d.ts 中定義了
+// 但為了保持原始文件的結構，這裡先保留註釋，實際開發中可以刪除這部分
+/* 
 declare global {
   namespace Express {
     interface Request {
@@ -17,18 +20,7 @@ declare global {
     }
   }
 }
-
-interface JwtPayload {
-  userId: string;
-}
-
-// 自定義用於模型的類型
-interface UserModel {
-  userId: string;
-  role: string;
-  email: string;
-  [key: string]: any;
-}
+*/
 
 /**
  * 驗證用戶是否已登入的中間件
@@ -54,7 +46,7 @@ export const isAuthenticated = async (req: Request, res: Response, next: NextFun
     }
 
     // 驗證令牌
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as jwt.JwtPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as TokenPayload;
     if (!decoded.userId) {
       return res.status(401).json({
         status: 'failed',
@@ -72,8 +64,8 @@ export const isAuthenticated = async (req: Request, res: Response, next: NextFun
       });
     }
 
-    // 在請求對象中設置用戶信息（使用 any 類型暫時繞過類型檢查）
-    (req as any).user = {
+    // 在請求對象中設置用戶信息
+    req.user = {
       id: user.userId,
       role: user.role,
       email: user.email
@@ -110,7 +102,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     }
 
     // 驗證令牌
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as jwt.JwtPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as TokenPayload;
     if (!decoded.userId) {
       return next();
     }
@@ -122,8 +114,8 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
       return next();
     }
 
-    // 在請求對象中設置用戶信息（使用 any 類型暫時繞過類型檢查）
-    (req as any).user = {
+    // 在請求對象中設置用戶信息
+    req.user = {
       id: user.userId,
       role: user.role,
       email: user.email

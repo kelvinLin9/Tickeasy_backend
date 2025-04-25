@@ -2,17 +2,7 @@ import createHttpError from 'http-errors';
 import validator from 'validator';
 import { verifyToken } from '../utils';
 import { Request, Response, NextFunction } from 'express';
-
-// 擴展 Request 類型，使用 any 類型避免類型檢查錯誤
-export interface CustomRequest extends Omit<Request, 'user'> {
-  user?: {
-    userId: string;
-    id: string; // 添加 id 屬性與 userId 保持一致
-    role: string;
-    email: string;
-  };
-  token?: string;
-}
+import { CustomRequest } from '../types/middleware';
 
 // token 驗證
 export const isAuth = async (req: Request, res: Response, next: NextFunction) => {
