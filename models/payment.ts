@@ -45,12 +45,12 @@ export class Payment {
   @Column({ length: 100, nullable: true })
   transactionId: string;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   rawPayload: object;
 
   @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn({ nullable: true })
+  @UpdateDateColumn({ nullable: false, default: () => 'now()' })
   updatedAt: Date;
 } 

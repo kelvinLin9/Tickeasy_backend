@@ -75,6 +75,6 @@ export class Order {
   @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn({ nullable: true })
+  @UpdateDateColumn({ nullable: false, default: () => 'now()' })
   updatedAt: Date;
 } 

@@ -15,6 +15,8 @@ import { Organization } from './organization';
 import { Venue } from './venue';
 import { LocationTag } from './location-tag';
 import { MusicTag } from './music-tag';
+import { ConcertSession } from './concert-session';
+import { TicketType } from './ticket-type';
 
 export enum ReviewStatus {
   PENDING = 'pending',
@@ -102,7 +104,7 @@ export class Concert {
   })
   reviewStatus: ReviewStatus;
 
-  @Column({ nullable: true })
+  @Column({ default: 0 })
   visitCount: number;
 
   @Column({ nullable: true })
@@ -116,4 +118,10 @@ export class Concert {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @OneToMany(() => ConcertSession, session => session.concert)
+  sessions: ConcertSession[];
+
+  @OneToMany(() => TicketType, ticketType => ticketType.concert)
+  ticketTypes: TicketType[];
 } 

@@ -139,6 +139,7 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
     });
   }
 
+  // 簡單比較字符串值，避免類型問題
   if (req.user.role !== 'admin') {
     return res.status(403).json({
       status: 'failed',
@@ -160,8 +161,8 @@ export const isOrganizer = (req: Request, res: Response, next: NextFunction) => 
     });
   }
 
-  // 使用 as string 轉換類型，解決比較問題
-  const role = req.user.role as string;
+  // 使用簡單字符串比較
+  const role = String(req.user.role);
   if (role !== 'admin' && role !== 'organizer') {
     return res.status(403).json({
       status: 'failed',
@@ -175,29 +176,9 @@ export const isOrganizer = (req: Request, res: Response, next: NextFunction) => 
 export const adminAuth = async (req: CustomRequest, res: Response, next: NextFunction) => {
   try {
     await isAuthenticated(req as Request, res, () => {
-      if (req.user && (req.user.role !== 'admin' && req.user.role !== 'superuser')) {
-        return res.status(403).json({ 
-          status: 'failed',
-          message: '權限不足',
-        });
-      }
-      next();
-    });
-  } catch (error) {
-    res.status(401).json({ 
-      status: 'failed',
-      message: '認證失敗',
-    });
-  }
-};
-
-export const teacherAuth = async (req: CustomRequest, res: Response, next: NextFunction) => {
-  try {
-    await isAuthenticated(req as Request, res, () => {
       if (req.user) {
-        // 使用 as string 轉換類型，解決比較問題
-        const role = req.user.role as string;
-        if (role !== 'teacher' && role !== 'admin' && role !== 'superuser') {
+        const role = String(req.user.role);
+        if (role !== 'admin' && role !== 'superuser') {
           return res.status(403).json({ 
             status: 'failed',
             message: '權限不足',
@@ -212,4 +193,4 @@ export const teacherAuth = async (req: CustomRequest, res: Response, next: NextF
       message: '認證失敗',
     });
   }
-}; 
+};

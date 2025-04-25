@@ -6,7 +6,8 @@ import {
   PrimaryGeneratedColumn, 
   Column, 
   ManyToOne,
-  JoinColumn
+  JoinColumn,
+  CreateDateColumn
 } from 'typeorm';
 import { Order } from './order';
 import { TicketType } from './ticket-type';
@@ -56,6 +57,6 @@ export class Ticket {
   @Column({ length: 20 })
   status: string;
 
-  @Column({ type: 'timestamp' })
+  @CreateDateColumn({ name: 'purchaseTime' })
   purchaseTime: Date;
 } 

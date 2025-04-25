@@ -6,7 +6,7 @@ declare global {
     // 擴展 User 接口
     interface User {
       id: string;
-      role: string | UserRole;
+      role: UserRole;
       email: string;
       [key: string]: any;
     }

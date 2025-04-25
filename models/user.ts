@@ -18,6 +18,8 @@ import {
 } from 'typeorm';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { Ticket } from './ticket';
+import { Order } from './order';
 
 export enum UserRole {
   USER = 'user',
@@ -29,6 +31,22 @@ export enum Gender {
   MALE = 'male',
   FEMALE = 'female',
   OTHER = 'other'
+}
+
+// OAuth Provider 介面定義
+export interface OAuthProvider {
+  provider: string;
+  providerId: string;
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt: Date;
+}
+
+// 搜尋歷史項目介面
+export interface SearchHistoryItem {
+  query: string;
+  timestamp: Date;
+  category?: string;
 }
 
 @Entity('users')
@@ -112,10 +130,10 @@ export class User {
   lastPasswordResetAttempt: Date;
 
   @Column('jsonb', { default: '[]', nullable: false })
-  oauthProviders: object;
+  oauthProviders: OAuthProvider[];
 
   @Column('jsonb', { default: '[]', nullable: true })
-  searchHistory: object;
+  searchHistory: SearchHistoryItem[];
 
   @CreateDateColumn({ nullable: false })
   createdAt: Date;
@@ -126,12 +144,11 @@ export class User {
   @DeleteDateColumn({ nullable: true })
   deletedAt: Date;
 
-  // 關聯定義將在相關模型創建後添加
-  // @OneToMany(() => Ticket, ticket => ticket.user)
-  // tickets: Ticket[];
+  @OneToMany(() => Ticket, ticket => ticket.user)
+  tickets: Ticket[];
 
-  // @OneToMany(() => Order, order => order.user)
-  // orders: Order[];
+  @OneToMany(() => Order, order => order.user)
+  orders: Order[];
 
   @BeforeInsert()
   @BeforeUpdate()
