@@ -16,9 +16,11 @@ export type AsyncRequestHandler = (
  * @returns 包裝後的異步函數
  */
 export const handleErrorAsync = (fn: AsyncRequestHandler): AsyncRequestHandler => {
-  return (req: Request, res: Response, next: NextFunction): Promise<any> => {
-    return Promise.resolve(fn(req, res, next)).catch((error) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+    try {
+      return await fn(req, res, next);
+    } catch (error) {
       next(error);
-    });
+    }
   };
 }; 
