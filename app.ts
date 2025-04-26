@@ -101,10 +101,10 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     message,
   };
   
-  // 添加字段錯誤（如果有）
-  if (err.fieldErrors) {
-    errorResponse.fieldErrors = err.fieldErrors;
-  }
+  // // 添加字段錯誤（如果有）
+  // if (err.fieldErrors) {
+  //   errorResponse.fieldErrors = err.fieldErrors;
+  // }
   
   // 只在開發環境下添加詳細錯誤信息
   if (isDev) {
