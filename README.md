@@ -162,11 +162,6 @@
 | GET  | /profile | 獲取用戶個人資料 | 是       |
 | PUT  | /profile | 更新用戶個人資料 | 是       |
 
-## 測試
-
-```bash
-npm test
-```
 
 ## 專案結構
 

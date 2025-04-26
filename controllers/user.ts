@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppDataSource } from '../config/database';
 import { User as UserEntity } from '../models/user';
-import { ApiResponse, UpdateProfileRequest, UserProfileResponse, UserProfileData } from '../types';
-import { handleErrorAsync } from '../utils';
+import { ApiResponse, UpdateProfileRequest, UserProfileResponse, UserProfileData, ErrorCode } from '../types';
+import { handleErrorAsync, ApiError } from '../utils';
 
 /**
  * 獲取用戶個人資料
@@ -12,17 +12,8 @@ export const getUserProfile = handleErrorAsync(async (req: Request, res: Respons
   // const authenticatedUser = req.user as Express.User;
   const authenticatedUser = req.user as { userId: string; role: string; email: string; };
 
-  // if (!authenticatedUser || !authenticatedUser.userId) {
-  //   return res.status(401).json({
-  //     status: 'failed',
-  //     message: '未授權的訪問'
-  //   });
-  // }
   if (!authenticatedUser) {
-    return res.status(401).json({
-      status: 'failed',
-      message: '未授權的訪問'
-    });
+    throw ApiError.unauthorized();
   }
 
   const userId = authenticatedUser.userId;
@@ -52,10 +43,7 @@ export const getUserProfile = handleErrorAsync(async (req: Request, res: Respons
   });
 
   if (!selectedUser) {
-    return res.status(404).json({
-      status: 'failed',
-      message: '找不到用戶資料'
-    });
+    throw ApiError.notFound('用戶資料');
   }
 
   // 返回只包含選定欄位的用戶資料
@@ -75,12 +63,8 @@ export const updateUserProfile = handleErrorAsync(async (req: Request, res: Resp
   // const userId = (req.user as Express.User)?.userId;
   const authenticatedUser = req.user as { userId: string; role: string; email: string; };
 
-  // if (!userId) {
   if (!authenticatedUser) {
-    return res.status(401).json({
-      status: 'failed',
-      message: '未授權'
-    });
+    throw ApiError.unauthorized();
   }
 
   const userId = authenticatedUser.userId;
@@ -103,10 +87,7 @@ export const updateUserProfile = handleErrorAsync(async (req: Request, res: Resp
   const user = await userRepository.findOne({ where: { userId } });
   
   if (!user) {
-    return res.status(404).json({
-      status: 'failed',
-      message: '找不到用戶'
-    });
+    throw ApiError.notFound('用戶');
   }
   
   // 更新用戶資料
@@ -137,10 +118,7 @@ export const updateUserProfile = handleErrorAsync(async (req: Request, res: Resp
   });
 
   if (!updatedSelectedUser) {
-    return res.status(500).json({
-      status: 'failed',
-      message: '更新用戶後無法獲取資料'
-    });
+    throw ApiError.systemError();
   }
 
   return res.status(200).json({
