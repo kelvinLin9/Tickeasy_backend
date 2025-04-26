@@ -24,14 +24,14 @@ export class Order {
   @Column({ name: 'ticketTypeId' })
   ticketTypeId: string;
 
-  @ManyToOne(() => TicketType)
+  @ManyToOne(() => TicketType, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'ticketTypeId' })
   ticketType: TicketType;
 
   @Column({ name: 'userId', nullable: true })
   userId: string;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'userId' })
   user: User;
 

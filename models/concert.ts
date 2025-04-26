@@ -40,21 +40,21 @@ export class Concert {
   @Column({ name: 'venueId', nullable: true })
   venueId: string;
 
-  @ManyToOne(() => Venue, { nullable: true })
+  @ManyToOne(() => Venue, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'venueId' })
   venue: Venue;
 
   @Column({ name: 'locationTagId' })
   locationTagId: string;
 
-  @ManyToOne(() => LocationTag)
+  @ManyToOne(() => LocationTag, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'locationTagId' })
   locationTag: LocationTag;
 
   @Column({ name: 'musicTagId' })
   musicTagId: string;
 
-  @ManyToOne(() => MusicTag)
+  @ManyToOne(() => MusicTag, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'musicTagId' })
   musicTag: MusicTag;
 
