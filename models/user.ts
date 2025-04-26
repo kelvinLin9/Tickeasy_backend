@@ -20,6 +20,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { Ticket } from './ticket';
 import { Order } from './order';
+import { Organization } from './organization';
 
 export enum UserRole {
   USER = 'user',
@@ -149,6 +150,9 @@ export class User {
 
   @OneToMany(() => Order, order => order.user)
   orders: Order[];
+
+  @OneToMany(() => Organization, organization => organization.user)
+  organizations: Organization[];
 
   @BeforeInsert()
   @BeforeUpdate()

@@ -11,6 +11,8 @@ import {
   OneToMany
 } from 'typeorm';
 import { Concert } from './concert';
+import { Order } from './order';
+import { Ticket } from './ticket';
 
 @Entity('ticketType')
 export class TicketType {
@@ -53,4 +55,10 @@ export class TicketType {
 
   @CreateDateColumn()
   createdAt: Date;
+  
+  @OneToMany(() => Order, order => order.ticketType)
+  orders: Order[];
+  
+  @OneToMany(() => Ticket, ticket => ticket.ticketType)
+  tickets: Ticket[];
 } 

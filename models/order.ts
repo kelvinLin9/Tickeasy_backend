@@ -13,6 +13,8 @@ import {
 } from 'typeorm';
 import { User } from './user';
 import { TicketType } from './ticket-type';
+import { Ticket } from './ticket';
+import { Payment } from './payment';
 
 @Entity('order')
 export class Order {
@@ -77,4 +79,10 @@ export class Order {
 
   @UpdateDateColumn({ nullable: false, default: () => 'now()' })
   updatedAt: Date;
+  
+  @OneToMany(() => Ticket, ticket => ticket.order)
+  tickets: Ticket[];
+  
+  @OneToMany(() => Payment, payment => payment.order)
+  payments: Payment[];
 } 

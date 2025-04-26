@@ -9,6 +9,7 @@ import {
   UpdateDateColumn,
   OneToMany
 } from 'typeorm';
+import { Concert } from './concert';
 
 @Entity('venues')
 export class Venue {
@@ -47,4 +48,7 @@ export class Venue {
 
   @UpdateDateColumn()
   updatedAt: Date;
+  
+  @OneToMany(() => Concert, concert => concert.venue)
+  concerts: Concert[];
 } 

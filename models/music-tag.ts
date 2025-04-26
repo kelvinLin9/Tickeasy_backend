@@ -7,6 +7,7 @@ import {
   Column, 
   OneToMany
 } from 'typeorm';
+import { Concert } from './concert';
 
 @Entity('musicTag')
 export class MusicTag {
@@ -15,4 +16,7 @@ export class MusicTag {
 
   @Column({ length: 50 })
   musicTagName: string;
+  
+  @OneToMany(() => Concert, concert => concert.musicTag)
+  concerts: Concert[];
 } 
