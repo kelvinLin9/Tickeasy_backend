@@ -99,7 +99,6 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   const errorResponse: any = {
     status: 'failed',
     message,
-    code: errorCode
   };
   
   // 添加字段錯誤（如果有）
@@ -120,7 +119,6 @@ app.use((req: Request, res: Response) => {
   res.status(404).json({
     status: 'failed',
     message: '找不到該資源',
-    code: 'D01' // 使用DATA_NOT_FOUND的值
   });
 });
 
