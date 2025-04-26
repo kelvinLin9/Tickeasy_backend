@@ -2,7 +2,8 @@ import createHttpError from 'http-errors';
 import jsonWebToken from 'jsonwebtoken';
 import { SignOptions } from 'jsonwebtoken';
 import { handleErrorAsync } from './handleErrorAsync';
-import { TokenPayload } from '../types';
+import { ApiError } from './apiError';
+import { TokenPayload, ErrorCode } from '../types';
 
 // 更精確的使用者介面定義
 interface User {
@@ -10,39 +11,31 @@ interface User {
   role: string;
 }
 
-// 電子郵件令牌載荷
-interface EmailTokenPayload {
-  code: string;
-  iat: number;
-  exp: number;
+// 擴展的令牌載荷，包含電子郵件
+interface EmailTokenPayload extends TokenPayload {
+  email: string;
 }
 
-// 認證令牌載荷，使用從 types 導入的 TokenPayload
+// 認證令牌載荷，包含用戶ID和角色
 interface AuthTokenPayload extends TokenPayload {
-  iat: number;
-  exp: number;
+  userId: string;
+  role: string;
 }
 
 /**
  * 生成 JWT 令牌
- * @param user 用戶數據
+ * @param payload 令牌載荷
+ * @param options 簽名選項
  * @returns JWT 令牌
  */
-export const generateToken = (user: User): string => {
-  if (!process.env.JWT_SECRET || !process.env.JWT_EXPIRES_DAY) {
-    throw new Error("Required JWT environment variables are not set.");
+export const generateToken = (
+  payload: TokenPayload, 
+  options: SignOptions = { expiresIn: '7d' }
+): string => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET environment variable is not set.");
   }
-  
-  // 生成 payload，包括用戶 ID 和角色
-  const payload: TokenPayload = {
-    userId: user.userId,
-    role: user.role,
-  };
-  
-  // 簽名 token
-  return jsonWebToken.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_DAY || '7d'
-  } as SignOptions);
+  return jsonWebToken.sign(payload, process.env.JWT_SECRET, options);
 };
 
 /**
@@ -60,23 +53,34 @@ export const verifyToken = (token: string): EmailTokenPayload | AuthTokenPayload
     // 檢查是否為驗證碼 token
     if ('code' in decoded) {
       // 檢查是否過期
-      if (decoded.exp * 1000 < Date.now()) {
-        throw createHttpError(400, '驗證碼已過期');
+      if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+        throw ApiError.create(400, '驗證碼已過期', ErrorCode.AUTH_TOKEN_EXPIRED);
       }
       return decoded;
     }
     
     // 檢查是否為認證 token
     if (!('userId' in decoded) || !('role' in decoded)) {
-      throw createHttpError(401, '無效的 Token 格式');
+      throw ApiError.create(401, '無效的 Token 格式', ErrorCode.AUTH_TOKEN_INVALID);
     }
     
     return decoded;
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.name === 'TokenExpiredError') {
+        throw ApiError.create(401, 'Token 已過期', ErrorCode.AUTH_TOKEN_EXPIRED);
+      }
+      if (error.name === 'JsonWebTokenError') {
+        throw ApiError.create(401, '無效的 Token', ErrorCode.AUTH_TOKEN_INVALID);
+      }
+    }
+    
+    // 處理其他錯誤
     if (error instanceof createHttpError.HttpError) {
       throw error;
     }
-    throw createHttpError(401, '無效的 Token');
+    
+    throw ApiError.create(401, '無效的 Token', ErrorCode.AUTH_TOKEN_INVALID);
   }
 };
 
@@ -108,5 +112,5 @@ const generateRandomCode = (): string => {
   return code;
 };
 
-// 重新導出
-export { handleErrorAsync };
+// 導出 handleErrorAsync 和 ApiError
+export { handleErrorAsync, ApiError };

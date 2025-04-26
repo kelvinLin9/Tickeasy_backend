@@ -153,6 +153,8 @@
 | POST | /reset-password         | 重設密碼             | 否       |
 | GET  | /google                 | Google 登入（OAuth） | 否       |
 
+- Google 登入前端重定向`https://frontend-fj47.onrender.com/callback`
+
 ### 用戶相關 API (前綴路徑：/api/v1/users)
 
 | 方法 | 路徑     | 功能             | 需要認證 |
@@ -184,11 +186,3 @@ tickeasy-backend/
 ├── package.json          # 相依性管理
 └── tsconfig.json         # TypeScript 設定
 ```
-
-## 授權
-
-本專案使用 ISC 授權協議。
-
----
-
-如有任何問題或建議，請聯繫專案維護者。

@@ -69,22 +69,50 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   // 處理特定類型的錯誤，提供友好的錯誤消息
   let message = err.message || '系統發生錯誤';
   
-  // TypeORM 特定錯誤處理
-  if (err.name === 'EntityPropertyNotFoundError') {
-    message = '操作失敗，請稍後再試';
+  // 從錯誤對象中獲取錯誤碼，如果沒有則根據錯誤類型分配一個通用錯誤碼
+  let errorCode = err.code || '';
+  
+  // 如果沒有指定錯誤碼，則根據錯誤類型分配
+  if (!errorCode) {
+    if (err.name === 'EntityPropertyNotFoundError') {
+      errorCode = 'S02'; // 使用DATABASE_ERROR的值
+      message = '操作失敗，請稍後再試';
+    } else if (err.name === 'ValidationError') {
+      errorCode = 'V01'; // 使用VALIDATION_FAILED的值
+      message = '提交的數據格式不正確';
+    } else if (statusCode === 404) {
+      errorCode = 'D01'; // 使用DATA_NOT_FOUND的值
+    } else if (statusCode === 401) {
+      errorCode = 'A06'; // 使用AUTH_UNAUTHORIZED的值
+    } else if (statusCode === 403) {
+      errorCode = 'A07'; // 使用AUTH_FORBIDDEN的值
+    } else if (statusCode === 429) {
+      errorCode = 'S03'; // 使用RATE_LIMIT_EXCEEDED的值
+    } else if (statusCode >= 400 && statusCode < 500) {
+      errorCode = 'V01'; // 使用VALIDATION_FAILED的值
+    } else {
+      errorCode = 'S01'; // 使用SYSTEM_ERROR的值
+    }
   }
   
-  // 驗證錯誤
-  if (err.name === 'ValidationError') {
-    message = '提交的數據格式不正確';
-  }
-  
-  res.status(statusCode).json({
+  // 構建錯誤響應
+  const errorResponse: any = {
     status: 'failed',
     message,
-    // 只在開發環境下添加詳細錯誤信息
-    ...(isDev && { details: err.stack })
-  });
+    code: errorCode
+  };
+  
+  // 添加字段錯誤（如果有）
+  if (err.fieldErrors) {
+    errorResponse.fieldErrors = err.fieldErrors;
+  }
+  
+  // 只在開發環境下添加詳細錯誤信息
+  if (isDev) {
+    errorResponse.details = err.stack;
+  }
+  
+  res.status(statusCode).json(errorResponse);
 });
 
 // 註冊 404 處理中間件
@@ -92,6 +120,7 @@ app.use((req: Request, res: Response) => {
   res.status(404).json({
     status: 'failed',
     message: '找不到該資源',
+    code: 'D01' // 使用DATA_NOT_FOUND的值
   });
 });
 

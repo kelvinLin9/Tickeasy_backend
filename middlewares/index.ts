@@ -1,19 +1,20 @@
 import createHttpError from 'http-errors';
 import validator from 'validator';
-import { verifyToken } from '../utils';
+import { verifyToken, ApiError } from '../utils';
 import { Request, Response, NextFunction } from 'express';
 import { UserRole } from '../models/user';
+import { ErrorCode } from '../types';
 
 // token 驗證
 export const isAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
-      throw createHttpError(401, '請先登入');
+      throw ApiError.unauthorized();
     }
     const decoded = verifyToken(token);
     if (!('userId' in decoded) || !('role' in decoded) || !('email' in decoded)) {
-      throw createHttpError(401, '無效的 Token 格式');
+      throw ApiError.create(401, '無效的 Token 格式', ErrorCode.AUTH_TOKEN_INVALID);
     }
     
     // 設置 user 屬性，確保與 Express.User 接口兼容
@@ -28,7 +29,7 @@ export const isAuth = async (req: Request, res: Response, next: NextFunction) =>
     console.log('req.user:', req.user);
     next();
   } catch (error) {
-    next(createHttpError(401, '認證失敗：無效的 Token'));
+    next(ApiError.create(401, '認證失敗：無效的 Token', ErrorCode.AUTH_TOKEN_INVALID));
   }
 };
 
@@ -43,11 +44,11 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction) =
     try {
       // 檢查 req.user 中是否有角色資訊並且角色是否為 'admin'
       if (!req.user) {
-        throw createHttpError(401, '請先登入');
+        throw ApiError.unauthorized();
       }
       const user = req.user as { userId: string; role: string; email: string; };
       if (user.role !== 'admin') {
-        throw createHttpError(403, '授權失敗：您不具備管理員權限');
+        throw ApiError.forbidden();
       }
       next();
     } catch (error) {
@@ -58,9 +59,12 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction) =
 
 export const checkRequestBodyValidator = (req: Request, _res: Response, next: NextFunction) => {
   try {
+    const fieldErrors: Record<string, { code: string; message: string }> = {};
+
     for (let [key, value] of Object.entries(req.body)) {
       if (value === undefined || value === null) {
-        throw new Error('欄位未填寫正確');
+        fieldErrors[key] = { code: ErrorCode.VALIDATION_FAILED, message: '欄位未填寫正確' };
+        continue;
       }
 
       const _value = `${value}`;
@@ -68,47 +72,49 @@ export const checkRequestBodyValidator = (req: Request, _res: Response, next: Ne
       switch (key) {
         case 'name':
           if (!validator.isLength(_value, { min: 2 })) {
-            throw new Error('name 至少 2 個字元以上');
+            fieldErrors[key] = { code: ErrorCode.VALIDATION_NAME_LENGTH, message: 'name 至少 2 個字元以上' };
           }
           break;
         case 'email':
           if (!validator.isEmail(_value)) {
-            throw new Error('Email 格式不正確');
+            fieldErrors[key] = { code: ErrorCode.VALIDATION_EMAIL_FORMAT, message: 'Email 格式不正確' };
           }
           break;
         case 'password':
         case 'newPassword':
           if (!validator.isLength(_value, { min: 8 })) {
-            throw new Error('密碼需至少 8 碼以上');
-          }
-          if (validator.isAlpha(_value)) {
-            throw new Error('密碼不能只有英文');
-          }
-          if (validator.isNumeric(_value)) {
-            throw new Error('密碼不能只有數字');
-          }
-          if (!validator.isAlphanumeric(_value)) {
-            throw new Error('密碼需至少 8 碼以上，並英數混合');
+            fieldErrors[key] = { code: ErrorCode.VALIDATION_PASSWORD_FORMAT, message: '密碼需至少 8 碼以上' };
+          } else if (validator.isAlpha(_value)) {
+            fieldErrors[key] = { code: ErrorCode.VALIDATION_PASSWORD_FORMAT, message: '密碼不能只有英文' };
+          } else if (validator.isNumeric(_value)) {
+            fieldErrors[key] = { code: ErrorCode.VALIDATION_PASSWORD_FORMAT, message: '密碼不能只有數字' };
+          } else if (!validator.isAlphanumeric(_value)) {
+            fieldErrors[key] = { code: ErrorCode.VALIDATION_PASSWORD_FORMAT, message: '密碼需至少 8 碼以上，並英數混合' };
           }
           break;
         case 'phone':
           if (_value && !validator.isMobilePhone(_value, 'zh-TW')) {
-            throw new Error('電話格式不正確，請使用台灣手機號碼格式');
+            fieldErrors[key] = { code: ErrorCode.VALIDATION_FAILED, message: '電話格式不正確，請使用台灣手機號碼格式' };
           }
           break;
         case 'birthday':
           if (_value && !validator.isISO8601(_value)) {
-            throw new Error('生日格式不正確，請使用YYYY-MM-DD格式');
+            fieldErrors[key] = { code: ErrorCode.VALIDATION_FAILED, message: '生日格式不正確，請使用YYYY-MM-DD格式' };
           }
           break;
         case 'image':
           if (!validator.isURL(_value, { protocols: ['https'] })) {
-            throw new Error('image 格式不正確');
+            fieldErrors[key] = { code: ErrorCode.VALIDATION_FAILED, message: 'image 格式不正確' };
           }
           break;
         default:
           break;
       }
+    }
+
+    // 如果有字段錯誤，立即返回所有錯誤
+    if (Object.keys(fieldErrors).length > 0) {
+      throw ApiError.validation('表單驗證失敗', fieldErrors);
     }
 
     next();
